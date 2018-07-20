@@ -3,40 +3,42 @@
  */
 
 import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate } from "../libs/slateAutomergeBridge"
+import createGraph from '../graph/graph.js'
 import { Editor } from "slate-react"
 import { Value } from "slate"
 import Automerge from "automerge"
-import EditList from "slate-edit-list"
+// import EditList from "slate-edit-list"
 import Immutable from "immutable";
 import React from "react"
 import "./client.css";
 
 
-const plugin = EditList();
-const plugins = [plugin];
+// const plugin = EditList();
+// const plugins = [plugin];
+const plugins = [];
 
 function renderNode(props) {
     const { node, attributes, children, editor } = props;
-    const isCurrentItem = plugin.utils
-        .getItemsAtRange(editor.value)
-        .contains(node);
+    // const isCurrentItem = plugin.utils
+    //     .getItemsAtRange(editor.value)
+    //     .contains(node);
 
     switch (node.type) {
-        case "ul_list":
-            return <ul {...attributes}>{children}</ul>;
-        case "ol_list":
-            return <ol {...attributes}>{children}</ol>;
-
-        case "list_item":
-            return (
-                <li
-                    className={isCurrentItem ? "current-item" : ""}
-                    title={isCurrentItem ? "Current Item" : ""}
-                    {...props.attributes}
-                >
-                    {props.children}
-                </li>
-            );
+        // case "ul_list":
+        //     return < ul {...attributes}>{children}</ul>;
+        // case "ol_list":
+        //     return <ol {...attributes}>{children}</ol>;
+        //
+        // case "list_item":
+        //     return (
+        //         <li
+        //             className={isCurrentItem ? "current-item" : ""}
+        //             title={isCurrentItem ? "Current Item" : ""}
+        //             {...props.attributes}
+        //         >
+        //             {props.children}
+        //         </li>
+        //     );
 
         case "paragraph":
             return <div {...attributes}>{children}</div>;
@@ -56,6 +58,7 @@ export class Client extends React.Component {
         this.doc = Automerge.init();
         this.docSet = new Automerge.DocSet()
         this.onChange = this.onChange.bind(this)
+        this.graph = createGraph()
 
         this.connection = new Automerge.Connection(
             this.docSet,
@@ -97,6 +100,13 @@ export class Client extends React.Component {
      * UPDATE CLIENT FROM LOCAL OPERATION *
      **************************************/
     onChange = ({ operations, value }) => {
+        const docKey = this.graph.insertDocument(value)
+        console.log(`Created document with id ${docKey}`);
+        // setTimeout(() => {
+          this.graph.getDocument(docKey, document => {
+            console.log({ document });
+          // }, 2000)
+        })
         this.setState({ value: value })
         applySlateOperations(this.docSet, this.props.docId, operations, this.props.clientId)
     }

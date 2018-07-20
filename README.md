@@ -1,3 +1,20 @@
+# gundb Slate Client
+
+This is a fork of slate-automerge.
+
+This idea here is collaborative editing on top of gundb
+
+GunDB will support CRDT on the block level (I think), but not inside leaves, we may be able to use automerge to handle that eventually..
+
+## ToDo
+  - [x] build transform between gun graph and slate value
+  - [ ] build bridge between slate op and graph
+    - [x] map slate blocks onto graph nodes
+    - [ ] apply slate ops to graph
+    - [ ] render basic text view of graph
+
+  - [ ] build bridge between graph events and slate op
+
 # Slate Automerge Example
 
 A example of a collaborative editor using [Slate](https://github.com/ianstormtaylor/slate) and [Automerge](https://github.com/automerge/automerge). This example uses Automerge's CRDT algorithm to synchronize changes between connected clients and works for both on-line and off-line clients. When an off-line client reconnects to the network, it pushes it's own changes and grabs the latest changes, using Automerge's algorithm to merge the changes.

@@ -18,8 +18,14 @@ import Automerge from "automerge"
 import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
-    "insert_text", "remove_text", "insert_node", "split_node",
-    "remove_node", "merge_node", "set_node", "move_node"
+    "insert_text",
+    "remove_text",
+    "insert_node",
+    "remove_node",
+    "split_node",
+    "merge_node",
+    "set_node",
+    "move_node"
 ];
 
 /**
@@ -51,6 +57,7 @@ export const applySlateOperations = (docSet, docId, slateOperations, clientId) =
 const applySlateOperationsHelper = (doc, operations) => {
     operations.forEach(op => {
         if (allowedOperations.indexOf(op.type) === -1) {
+            console.error(`${op.type} not supported`);
             return;
         }
         const {
