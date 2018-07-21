@@ -67,11 +67,14 @@ export class Client extends React.Component {
             }
         )
 
+
         const initialValue = automergeJsonToSlate({
             "document": { ...this.doc.note }
         })
         const initialSlateValue = Value.fromJSON(initialValue)
 
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@');
+        console.log(initialSlateValue.toJS());
         this.state = {
             value: initialSlateValue,
             online: true,
@@ -79,6 +82,14 @@ export class Client extends React.Component {
     }
 
     componentDidMount = () => {
+        // const docId = this.graph.insertDocument(this.state.value)
+        // this.graph.getDocument(docId, newValue => {
+        //   console.log({ newValue });
+        //   this.setState({
+        //     value: Value.fromJSON(newValue)
+        //   })
+        // })
+
         this.initializeConnection()
     }
 
@@ -99,16 +110,16 @@ export class Client extends React.Component {
     /**************************************
      * UPDATE CLIENT FROM LOCAL OPERATION *
      **************************************/
-    onChange = ({ operations, value }) => {
-        const docKey = this.graph.insertDocument(value)
-        console.log(`Created document with id ${docKey}`);
-        // setTimeout(() => {
-          this.graph.getDocument(docKey, document => {
-            console.log({ document });
-          // }, 2000)
-        })
-        this.setState({ value: value })
-        applySlateOperations(this.docSet, this.props.docId, operations, this.props.clientId)
+    onChange = (change) => {
+        if (this.state.value !== change.value) {
+          this.graph.updateValue(this.gunDocId, change, newValue => {
+            console.log(JSON.stringify(newValue, null, 4));
+            this.setState({
+              // value: Value.fromJSON({ document: newValue })
+              value: change.value
+            })
+          })
+        }
     }
 
     /***************************************
@@ -129,6 +140,7 @@ export class Client extends React.Component {
             let change = this.state.value.change()
             change = applyAutomergeOperations(opSetDiff, change, () => { this.updateSlateFromAutomerge() });
             if (change) {
+              console.log('1###############');
                 this.setState({ value: change.value })
             }
         }
@@ -145,11 +157,18 @@ export class Client extends React.Component {
      *     a re-render drops the keyboard).
      */
     updateSlateFromAutomerge = () => {
+      console.log('APPLYING UPDATE FROM AUTOMERGE');
         const doc = this.docSet.getDoc(this.props.docId)
         const newJson = automergeJsonToSlate({
             "document": { ...doc.note }
         })
-        this.setState({ value: Value.fromJSON(newJson) })
+        const value = Value.fromJSON(newJson)
+        this.gunDocId = this.graph.insertDocument(value)
+        this.graph.getDocument(this.gunDocId, newValue => {
+          this.setState({
+            value: Value.fromJSON({ document: newValue })
+          })
+        })
     }
 
     /**************************************

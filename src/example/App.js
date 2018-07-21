@@ -12,7 +12,7 @@ const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, "Initialize Slate state", doc => {
     doc.note = slateCustomToJson(initialSlateValue.document);
 })
-// const savedAutomergeDoc = Automerge.save(doc);
+const savedAutomergeDoc = Automerge.save(doc);
 const maxClients = 6;
 
 

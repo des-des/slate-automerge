@@ -6,12 +6,14 @@ This idea here is collaborative editing on top of gundb
 
 GunDB will support CRDT on the block level (I think), but not inside leaves, we may be able to use automerge to handle that eventually..
 
-## ToDo
+## TODO
   - [x] build transform between gun graph and slate value
   - [ ] build bridge between slate op and graph
     - [x] map slate blocks onto graph nodes
-    - [ ] apply slate ops to graph
-    - [ ] render basic text view of graph
+    - [x] apply slate ops to graph
+    - [x] render basic text view of graph
+    - [ ] build transform for all slate operations
+      - [x] insert text
 
   - [ ] build bridge between graph events and slate op
 

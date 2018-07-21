@@ -1,4 +1,6 @@
 import slateValueToJSON from './slateCustomToJson'
+import createOperationEmitter from './operationEmitter'
+
 const Gun = require('gun');
 const genId = (() => {
   let counter = 0
@@ -29,17 +31,17 @@ const createGraph = () => {
   }
 
   const getDocument = (nodeId, cb) => {
+    console.log(`Getting document ${nodeId}`);
     const node = gun
       .get(nodeId)
       .once(nodeData => {
         // console.log('recieved block', { nodeData });
-        node.get('childBlocks').once((childNodes) => {
-          console.log();
+        gun.get(nodeId).get('childBlocks').once((childNodes) => {
           console.log(`Recieved child nodes from ${nodeId}`, { childNodes });
           const slateNode = JSON.parse(nodeData.slateData)
 
           if (childNodes) {
-            slateNode.blocks = []
+            slateNode.nodes = []
             const getChildNodeTrees = Object.keys(childNodes)
               .filter(key => key !== '_')
               .map(childNodeId => cb => {
@@ -49,9 +51,9 @@ const createGraph = () => {
 
             batch(getChildNodeTrees, childNodeTrees => {
               childNodeTrees.forEach((childNodeTree, i) => {
-                slateNode.blocks[i] = childNodeTree
+                slateNode.nodes[i] = childNodeTree
               })
-
+              console.log(`emitting node`, slateNode);
               cb(slateNode)
             })
           } else {
@@ -62,17 +64,30 @@ const createGraph = () => {
   }
   self.getDocument = getDocument
 
-  const insertBlock = (block, parentId) => {
+  const insertBlockFromJSON = (block, parentId) => {
     const {
       nodes,
-      ...slateData
+      ...blockData
     } = block
 
-    const blockId = `BLOCK_${genId()}` // todo use uuids
+    const blockId = (block.key && `BLOCK_${block.key}`) // todo use uuid
+      || `DOCUMENT_${genId()}` // todo use uuid
     console.log(`Generated id ${blockId}`);
+
+    const slateData = {
+      ...blockData,
+      data: {
+        ...blockData.data,
+        id: blockId
+      }
+    }
+    if (slateData.object === 'text') {
+      slateData.leaves = slateData.leaves.map(leaf => ({...leaf, text: leaf.text.join('')}))
+    }
+    const slateDataJSON = JSON.stringify(slateData)
     const node = gun
       .get(blockId)
-      .put({ slateData: JSON.stringify(slateData) })
+      .put({ slateData: slateDataJSON })
     //
     if (parentId !== undefined) {
       console.log(`SETTING ${blockId} as child of ${parentId}`);
@@ -83,18 +98,61 @@ const createGraph = () => {
     }
 
     ;(block.nodes || []).forEach(childBlock => {
-      insertBlock(childBlock, blockId)
+      insertBlockFromJSON(childBlock, blockId)
     })
 
     return blockId
   }
 
+  const updateNode = (nodeId, update) => {
+    const node = gun
+      .get(nodeId)
+      .once(nodeData => {
+        const slateData = JSON.parse(nodeData.slateData)
+        gun.get(nodeId).put({
+          ...nodeData,
+          slateData: JSON.stringify(update(slateData))
+        })
+      })
+  }
+
+  const insertText = (nodeId, offset, text) => {
+    updateNode(nodeId, nodeData => {
+      const oldText = nodeData.leaves[0].text
+      console.log();
+      return {
+        ...nodeData,
+        leaves: [
+          {
+            ...nodeData.leaves[0],
+            text: oldText.slice(0, offset) + text + oldText.slice(offset)
+          }
+        ]
+      }
+    })
+  }
+  self.insertText = insertText
+
+  const updateValue = (docId, change, cb) => {
+    emitOperations(change.operations, change.value)
+
+    getDocument(docId, cb)
+  }
+  self.updateValue = updateValue
+
+  const insertBlock = (value, parentId) => {
+    return insertBlockFromJSON(slateValueToJSON(value), parentId)
+  }
+  self.insertBlock = insertBlock
+
   const insertDocument = value => {
-    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1');
-    console.log('>>>', slateValueToJSON(value).document);
-    return insertBlock(slateValueToJSON(value).document)
+    console.log(`inserting document`);
+    return insertBlockFromJSON(slateValueToJSON(value).document)
   }
   self.insertDocument = insertDocument
+
+  const emitOperations = createOperationEmitter(self)
+  self.emitOperations = emitOperations
 
   return self
 }
